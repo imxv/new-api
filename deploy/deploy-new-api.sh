@@ -15,6 +15,17 @@ if [[ ! "$image_ref" =~ ^ghcr\.io/imxv/new-api@sha256:[0-9a-f]{64}$ ]]; then
   exit 2
 fi
 
+ghcr_user="${2:-}"
+if [[ ! "$ghcr_user" =~ ^[A-Za-z0-9-]+$ ]]; then
+  echo 'A valid GHCR user is required.' >&2
+  exit 2
+fi
+
+if ! IFS= read -r ghcr_token || [[ -z "$ghcr_token" ]]; then
+  echo 'A short-lived GHCR token is required on standard input.' >&2
+  exit 2
+fi
+
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo 'Another new-api deployment is already running.' >&2
@@ -29,6 +40,18 @@ fi
 mkdir -p "$BACKUP_DIR"
 timestamp="$(date -u +'%Y%m%dT%H%M%SZ')"
 old_image="$(docker inspect new-api --format '{{.Config.Image}}' 2>/dev/null || true)"
+
+logged_in=false
+logout_ghcr() {
+  if [[ "$logged_in" == true ]]; then
+    docker logout ghcr.io >/dev/null 2>&1 || true
+  fi
+}
+trap logout_ghcr EXIT
+
+printf '%s' "$ghcr_token" | docker login ghcr.io --username "$ghcr_user" --password-stdin >/dev/null
+logged_in=true
+unset ghcr_token
 
 if [[ -f "$DATABASE_FILE" ]]; then
   backup_file="$BACKUP_DIR/one-api.db.$timestamp"

@@ -158,6 +158,7 @@ jobs:
       url: https://imxv.kdns.fr
     permissions:
       contents: read
+      packages: read
     steps:
       - name: Configure SSH
         env:
@@ -176,12 +177,14 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           IMAGE: ${{ needs.build.outputs.image }}
           DIGEST: ${{ needs.build.outputs.digest }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.repository_owner }}
         run: |
           IMAGE_REF="${IMAGE}@${DIGEST}"
-          ssh \
+          printf '%s\n' "$GHCR_TOKEN" | ssh \
             -i "$HOME/.ssh/id_ed25519" \
             -p "$VPS_PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
-            "sudo /usr/local/sbin/deploy-new-api '$IMAGE_REF'"
+            "sudo /usr/local/sbin/deploy-new-api '$IMAGE_REF' '$GHCR_USER'"
