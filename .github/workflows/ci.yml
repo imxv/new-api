@@ -84,5 +84,17 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Test
-        run: bun test
+      - name: Test files in isolated runners
+        shell: bash
+        run: |
+          mapfile -d '' test_files < <(
+            find src -type f \( -name '*.test.ts' -o -name '*.test.tsx' \) \
+              -print0 | sort -z
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No frontend test files were found.' >&2
+            exit 1
+          fi
+          for test_file in "${test_files[@]}"; do
+            bun test "$test_file"
+          done
