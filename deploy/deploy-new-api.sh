@@ -7,6 +7,7 @@ readonly COMPOSE_FILE="$DEPLOY_DIR/compose.yaml"
 readonly ENV_FILE="$DEPLOY_DIR/.env"
 readonly DATABASE_FILE="$DEPLOY_DIR/data/one-api.db"
 readonly BACKUP_DIR="$DEPLOY_DIR/backups"
+readonly BACKUP_RETENTION=2
 readonly LOCK_FILE='/var/lock/new-api-deploy.lock'
 
 image_ref="${1:-}"
@@ -55,16 +56,34 @@ unset ghcr_token
 
 if [[ -f "$DATABASE_FILE" ]]; then
   backup_file="$BACKUP_DIR/one-api.db.$timestamp"
-  python3 - "$DATABASE_FILE" "$backup_file" <<'PY'
+  python3 - "$DATABASE_FILE" "$backup_file" "$BACKUP_RETENTION" <<'PY'
+from pathlib import Path
+import re
 import sqlite3
 import sys
 
 source = sqlite3.connect(sys.argv[1])
-destination = sqlite3.connect(sys.argv[2])
+backup_path = Path(sys.argv[2])
+retention = int(sys.argv[3])
+destination = sqlite3.connect(backup_path)
 with destination:
     source.backup(destination)
 destination.close()
 source.close()
+
+backup_pattern = re.compile(r'one-api\.db\.\d{8}T\d{6}Z$')
+backups = sorted(
+    (
+        path
+        for path in backup_path.parent.iterdir()
+        if path.is_file() and backup_pattern.fullmatch(path.name)
+    ),
+    key=lambda path: path.name,
+    reverse=True,
+)
+for stale_backup in backups[retention:]:
+    stale_backup.unlink()
+    print(f'Database backup removed: {stale_backup}')
 PY
   echo "Database backup created: $backup_file"
 fi
