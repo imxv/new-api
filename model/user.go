@@ -19,6 +19,33 @@ import (
 
 const UserNameMaxLength = 20
 
+var userAvatarIDs = []string{
+	"avatar-01",
+	"avatar-02",
+	"avatar-03",
+	"avatar-04",
+	"avatar-05",
+	"avatar-06",
+	"avatar-07",
+	"avatar-08",
+	"avatar-09",
+	"avatar-10",
+	"avatar-11",
+}
+
+func IsValidUserAvatar(avatar string) bool {
+	for _, id := range userAvatarIDs {
+		if avatar == id {
+			return true
+		}
+	}
+	return false
+}
+
+func RandomUserAvatar() string {
+	return userAvatarIDs[common.GetRandomInt(len(userAvatarIDs))]
+}
+
 var userSortColumns = map[string]string{
 	"id":            "id",
 	"username":      "username",
@@ -82,6 +109,7 @@ type User struct {
 	Password         string                     `json:"password" gorm:"not null;" validate:"min=8,max=20"`
 	OriginalPassword string                     `json:"original_password" gorm:"-:all"` // this field is only for Password change verification, don't save it to database!
 	DisplayName      string                     `json:"display_name" gorm:"index" validate:"max=20"`
+	Avatar           string                     `json:"avatar" gorm:"type:varchar(32)" validate:"max=32"`
 	Role             int                        `json:"role" gorm:"type:int;default:1"`   // admin, common
 	Status           int                        `json:"status" gorm:"type:int;default:1"` // enabled, disabled
 	Email            string                     `json:"email" gorm:"index" validate:"max=50"`
@@ -110,6 +138,16 @@ type User struct {
 	LastLoginAt      int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 	AuthVersion      int64                      `json:"-" gorm:"type:bigint;not null;default:1;column:auth_version"`
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
+}
+
+func (user *User) BeforeCreate(_ *gorm.DB) error {
+	if user.Avatar == "" {
+		user.Avatar = RandomUserAvatar()
+	}
+	if !IsValidUserAvatar(user.Avatar) {
+		return errors.New("invalid user avatar")
+	}
+	return nil
 }
 
 func (user *User) ToBaseUser() *UserBase {

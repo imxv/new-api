@@ -513,6 +513,7 @@ func buildSelfUserData(user *model.User) map[string]interface{} {
 		"id":                user.Id,
 		"username":          user.Username,
 		"display_name":      user.DisplayName,
+		"avatar":            user.Avatar,
 		"role":              user.Role,
 		"status":            user.Status,
 		"email":             user.Email,
@@ -864,6 +865,13 @@ func UpdateSelf(c *gin.Context) {
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
+	}
+	if user.Avatar != "" {
+		if !model.IsValidUserAvatar(user.Avatar) {
+			common.ApiErrorI18n(c, i18n.MsgInvalidInput)
+			return
+		}
+		cleanUser.Avatar = user.Avatar
 	}
 	if user.Password == "$I_LOVE_U" {
 		user.Password = "" // rollback to what it should be

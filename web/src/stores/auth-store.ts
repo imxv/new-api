@@ -30,6 +30,7 @@ export interface AuthUser {
   id: number
   username: string
   display_name?: string
+  avatar?: string
   email?: string
   role: number
   status?: number

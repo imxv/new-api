@@ -16,20 +16,23 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { PencilEdit02Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { Activity, BarChart3, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { StatusBadge } from '@/components/status-badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
+import { UserAvatar } from '@/components/user-avatar'
 import { formatCompactNumber, formatQuota } from '@/lib/format'
 import { getRoleLabel } from '@/lib/roles'
 
 import { getDisplayName } from '../lib'
 import type { UserProfile } from '../types'
+import { AvatarSelectionDialog } from './avatar-selection-dialog'
 
 // ============================================================================
 // Profile Header Component
@@ -38,9 +41,14 @@ import type { UserProfile } from '../types'
 interface ProfileHeaderProps {
   profile: UserProfile | null
   loading: boolean
+  onProfileUpdate: () => void | Promise<void>
 }
 
-export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
+export function ProfileHeader({
+  profile,
+  loading,
+  onProfileUpdate,
+}: ProfileHeaderProps) {
   const { t } = useTranslation()
 
   if (loading) {
@@ -81,8 +89,6 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
 
   const displayName = getDisplayName(profile)
   const avatarName = profile.username || displayName
-  const avatarFallback = getUserAvatarFallback(avatarName)
-  const avatarFallbackStyle = getUserAvatarStyle(avatarName)
   const roleLabel = getRoleLabel(profile.role)
   const stats: {
     label: string
@@ -118,14 +124,33 @@ export function ProfileHeader({ profile, loading }: ProfileHeaderProps) {
     <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
       <CardContent className='p-3 sm:p-5'>
         <div className='flex items-center gap-3 text-left sm:gap-4'>
-          <Avatar className='ring-background h-12 w-12 rounded-xl text-sm ring-2 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-lg sm:ring-4'>
-            <AvatarFallback
-              className='rounded-xl font-semibold text-white sm:rounded-2xl'
-              style={avatarFallbackStyle}
-            >
-              {avatarFallback}
-            </AvatarFallback>
-          </Avatar>
+          <AvatarSelectionDialog
+            profile={profile}
+            onProfileUpdate={onProfileUpdate}
+            trigger={
+              <Button
+                type='button'
+                variant='ghost'
+                aria-label={t('Choose your avatar')}
+                className='group/avatar-edit focus-visible:ring-ring relative h-auto shrink-0 rounded-xl p-0 focus-visible:ring-2 focus-visible:ring-offset-2 sm:rounded-2xl'
+              >
+                <UserAvatar
+                  avatar={profile.avatar}
+                  name={avatarName}
+                  className='ring-background h-12 w-12 rounded-xl text-sm ring-2 transition-opacity group-hover/avatar-edit:opacity-90 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-lg sm:ring-4'
+                  fallbackClassName='rounded-xl sm:rounded-2xl'
+                />
+                <span className='bg-background text-foreground ring-background absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full shadow-sm ring-2 sm:size-7'>
+                  <HugeiconsIcon
+                    icon={PencilEdit02Icon}
+                    size={14}
+                    strokeWidth={2}
+                    aria-hidden='true'
+                  />
+                </span>
+              </Button>
+            }
+          />
 
           <div className='min-w-0 flex-1 space-y-1.5 sm:space-y-3'>
             <div className='flex min-w-0 items-center gap-2'>
